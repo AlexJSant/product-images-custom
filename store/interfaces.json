@@ -1,0 +1,8 @@
+{
+  "product-images-custom": {
+    "component": "ProductImagesCustom"
+  },
+  "product-images-custom.high-quality-image": {
+    "component": "HighQualityProductImage"
+  }
+}

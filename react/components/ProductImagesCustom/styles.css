@@ -1,0 +1,44 @@
+/**
+*   Product Image CSS Module
+*/
+
+.productVideo {
+}
+
+.productImage {
+}
+
+.highQualityProductImageImgElement {
+  max-height: unset;
+  object-fit: contain;
+}
+
+/** Overrides figure css declaration from vtex-tachyons, which
+ * for some reason adds margin to all figure elements */
+.figure {
+  margin: 0;
+}
+
+.gradientBaseBottom {
+  /** TODO: use the actual bg-base token instead of a hardcoded color */
+  background: linear-gradient(transparent, white);
+}
+
+.gradientBaseTop {
+  /** TODO: use the actual bg-base token instead of a hardcoded color */
+  background: linear-gradient(white, transparent);
+}
+
+.gradientBaseRight {
+  /** TODO: use the actual bg-base token instead of a hardcoded color */
+  background: linear-gradient(90deg, transparent, white);
+}
+
+.gradientBaseLeft {
+  /** TODO: use the actual bg-base token instead of a hardcoded color */
+  background: linear-gradient(90deg, white, transparent);
+}
+
+.hideFirstImage {
+  display: none;
+}
