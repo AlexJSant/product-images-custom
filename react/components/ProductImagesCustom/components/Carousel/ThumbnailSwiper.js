@@ -70,12 +70,30 @@ const ThumbnailSwiper = props => {
     ...swiperProps
   } = props
 
-  const hasThumbs = slides.length > 1
+  const hasThumbs = slides.length >= 1 // Mudança: >= 1 ao invés de > 1
+  const slidesCount = slides.length || 1
+  
+  // Definir largura mínima dos thumbnails
+  const THUMB_MIN_WIDTH_DESKTOP = 231 // Ajuste conforme sua medida ideal
+  const THUMB_MIN_WIDTH_MOBILE = 100 // Ajuste para mobile
+  
+  // Calcular largura baseada no número de slides
+  const getThumbWidth = () => {
+    if (slidesCount >= 3) {
+      return undefined // Usa w-20 (20%) quando há 3+ slides
+    }
+    // Quando há menos de 3, usa largura mínima
+    return typeof window !== 'undefined' && window.innerWidth >= 640 
+      ? `${THUMB_MIN_WIDTH_DESKTOP}px` 
+      : `${THUMB_MIN_WIDTH_MOBILE}px`
+  }
+
+  const thumbWidth = getThumbWidth()
 
   const thumbClassName = classNames(
     `${handles.carouselGaleryThumbs} dn h-auto`,
     {
-      'db-ns': hasThumbs,
+      'db-ns': hasThumbs && slides.length >= 1, // Garantir que há pelo menos 1 slide
       mt3: !isThumbsVertical,
       'w-20 bottom-0 top-0 absolute': isThumbsVertical,
       'left-0':
@@ -147,14 +165,14 @@ const ThumbnailSwiper = props => {
     <div className={thumbClassName} data-testid="thumbnail-swiper">
       <Swiper
         className={`h-100 ${handles.productImagesThumbsSwiperContainer}`}
-        slidesPerView="auto"
+        slidesPerView={slides.length >= 3 ? 3 : "auto"}
+        spaceBetween={10}
         touchRatio={1}
         threshold={8}
         navigation={navigationConfig}
-        /* Slides are grouped when thumbnails arrows are enabled
-         * so that clicking on next/prev will scroll more than
-         * one thumbnail */
-        slidesPerGroup={displayThumbnailsArrows ? 4 : 1}
+        slidesPerGroup={1}
+        loop={slides.length >= 3}
+        loopedSlides={slides.length >= 3 ? 3 : undefined}
         freeMode={false}
         mousewheel={false}
         zoom={false}
@@ -174,6 +192,8 @@ const ThumbnailSwiper = props => {
                 height: isThumbsVertical ? 'auto' : '115px',
                 maxHeight: thumbnailMaxHeight || 'unset',
                 position: 'relative',
+                width: thumbWidth, // Adicionar largura quando há menos de 3 slides
+                minWidth: thumbWidth, // Garantir largura mínima
               }}
             >
               <Thumbnail

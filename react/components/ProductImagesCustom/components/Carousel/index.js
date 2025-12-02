@@ -263,7 +263,7 @@ class Carousel extends Component {
     const isThumbsVertical =
       thumbnailsOrientation === THUMBS_ORIENTATION.VERTICAL
 
-    const hasThumbs = slides && slides.length > 1
+    const hasThumbs = slides && slides.length >= 1 // Mudança: >= 1 ao invés de > 1
 
     const galleryCursor = {
       'in-page': styles.carouselGaleryCursor,
@@ -339,6 +339,7 @@ class Carousel extends Component {
       <div className={containerClasses} aria-hidden="true">
         {isThumbsVertical &&
           thumbnailVisibility === THUMBS_VISIBILITY.VISIBLE &&
+          hasThumbs && // Adicionar verificação para garantir que há slides
           thumbnailSwiper}
         <div className={imageClasses}>
           {!this.state.thumbSwiper?.destroyed && (
@@ -349,6 +350,8 @@ class Carousel extends Component {
               resistanceRatio={slides.length > 1 ? 0.85 : 0}
               onSlideChange={this.handleSlideChange}
               updateOnWindowResize
+              loop={slides.length > 1}
+              loopedSlides={slides.length >= 3 ? 3 : slides.length}
               {...this.galleryParams}
             >
               {slides.map((slide, i) => (
@@ -398,6 +401,7 @@ class Carousel extends Component {
 
           {!isThumbsVertical &&
             thumbnailVisibility === THUMBS_VISIBILITY.VISIBLE &&
+            hasThumbs && // Adicionar verificação para garantir que há slides
             thumbnailSwiper}
         </div>
       </div>
