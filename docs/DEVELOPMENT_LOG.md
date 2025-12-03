@@ -11,6 +11,7 @@ Este documento registra as customizações e melhorias implementadas no app `pro
 - Implementação de CSS condicional baseado em props
 - Melhorias na experiência do usuário com loop infinito
 - Ajustes de responsividade e tamanhos
+- Correção de bugs de sincronização e comportamento visual
 
 ---
 
@@ -48,22 +49,32 @@ body:not(:has(.hideFirstImage)) * {
 
 ---
 
-### 3. Customização do Carrossel de Thumbnails - 3 Slides Fixos
+### 3. Customização do Carrossel de Thumbnails - 3 Espaços Visuais Sempre
 
-**Problema:** Mostrar 3 thumbnails fixos no render inicial quando há 3 ou mais slides.
+**Problema:** Garantir que sempre sejam exibidos 3 espaços visuais (ocupados ou vazios), cada um ocupando exatamente 1/3 do espaço disponível.
 
 **Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
 
 **Mudanças:**
-- Linha 168: `slidesPerView={slides.length >= 3 ? 3 : "auto"}`
-  - Com 3+ slides: mostra exatamente 3 thumbnails
-  - Com menos de 3: usa `"auto"` para respeitar largura CSS
+- Linha 178: `slidesPerView={3}` - Sempre mostra 3 espaços visuais
+- Removida lógica condicional de `slidesPerView`
+- Removida lógica de largura fixa (`thumbWidth`) quando há menos de 3 slides
+- Linha 193: `centeredSlides={slides.length < 3}` - Centraliza quando há menos de 3 slides
+- Linha 194: `centeredSlidesBounds={slides.length < 3}` - Limita bounds quando centralizado
 
 **Comportamento:**
-- **3+ slides:** Mostra 3 thumbnails fixos no render inicial
-- **1-2 slides:** Mostra todos os thumbnails disponíveis
+- **Sempre:** Mostra 3 espaços visuais, cada um ocupando 1/3 do espaço
+- **1 slide:** 1 thumbnail ocupando espaço central, 2 espaços vazios
+- **2 slides:** 2 thumbnails centralizados, 1 espaço vazio
+- **3+ slides:** 3 thumbnails visíveis, scroll horizontal para ver mais
 
----
+**CSS complementar (Store Theme ou swiper.scoped.css):**
+/* Garantir que cada slide ocupe exatamente 1/3 do espaço */
+.carouselGaleryThumbs .swiper-slide {
+  width: calc((100% - 20px) / 3) !important; /* 100% - (2 * spaceBetween) / 3 */
+  flex-shrink: 0;
+  flex-grow: 0;
+}---
 
 ### 4. Loop Infinito nos Carrosséis
 
@@ -76,12 +87,10 @@ body:not(:has(.hideFirstImage)) * {
 - **Comportamento:** Loop sempre ativo quando há mais de 1 slide
 
 **Mudanças no ThumbnailSwiper:**
-- Linha 174-175: `loop={slides.length >= 3}` e `loopedSlides={slides.length >= 3 ? 3 : undefined}`
-- **Comportamento:** 
-  - **3+ slides:** Loop ativo
-  - **1-2 slides:** Loop desativado
+- Linha 189: `loop={false}` - **Loop desabilitado permanentemente**
+- **Motivo:** Evitar problemas de sincronização entre carrossel principal e thumbnails
 
-**Resultado:** Carrossel principal sempre infinito (quando aplicável), thumbnails com loop apenas quando há 3+ slides.
+**Resultado:** Carrossel principal sempre infinito (quando aplicável), thumbnails sem loop para evitar bugs de sincronização.
 
 ---
 
@@ -102,33 +111,44 @@ body:not(:has(.hideFirstImage)) * {
 
 ---
 
-### 6. Largura Mínima dos Thumbnails
+### 6. Desabilitar Navegação dos Thumbnails com Menos de 3 Slides
 
-**Problema:** Quando há menos de 3 slides, os thumbnails ficavam muito pequenos usando apenas `w-20` (20%).
+**Problema:** Setas de navegação dos thumbnails causavam bugs quando havia menos de 3 slides.
 
 **Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
 
-**Solução implementada:**ipt
-// Definir largura mínima dos thumbnails
-const THUMB_MIN_WIDTH_DESKTOP = 231px
-const THUMB_MIN_WIDTH_MOBILE = 100px
-
-// Calcular largura baseada no número de slides
-const getThumbWidth = () => {
-  if (slidesCount >= 3) {
-    return undefined // Usa w-20 (20%) quando há 3+ slides
-  }
-  // Quando há menos de 3, usa largura mínima
-  return typeof window !== 'undefined' && window.innerWidth >= 640 
-    ? `${THUMB_MIN_WIDTH_DESKTOP}px` 
-    : `${THUMB_MIN_WIDTH_MOBILE}px`
-}**Aplicado no style do SwiperSlide:**
-- `width: thumbWidth`
-- `minWidth: thumbWidth`
+**Mudanças:**
+- Linha 77: `const shouldShowNavigation = slidesCount >= 3 && displayThumbnailsArrows`
+- Linha 185: `navigation={shouldShowNavigation ? navigationConfig : false}`
+- Linha 116: Adicionada verificação `slidesCount < 3` no `useMemo` das arrows
+- Linha 169: Adicionado `slidesCount` como dependência do `useMemo`
 
 **Comportamento:**
-- **3+ slides:** Usa `w-20` (20% da largura) - 3 thumbnails por vez
-- **1-2 slides:** Usa largura fixa (231px desktop / 100px mobile)
+- **3+ slides:** Navegação habilitada (se `displayThumbnailsArrows` for `true`)
+- **1-2 slides:** Navegação desabilitada
+
+**Resultado:** Elimina bugs de sincronização quando há poucos slides.
+
+---
+
+### 7. Desabilitar Drag no Desktop com 2 ou Menos Slides
+
+**Problema:** Drag (arrastar com mouse) no desktop causava comportamento estranho quando havia 2 slides, jogando os slides para o final do carrossel.
+
+**Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
+
+**Mudanças:**
+- Linha 80: `const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640`
+- Linha 82: `const shouldDisableDrag = isDesktop && slidesCount <= 2`
+- Linha 191: `simulateTouch={!shouldDisableDrag}` - Desabilita simulação de touch no desktop
+- Linha 192: `allowTouchMove={!shouldDisableDrag}` - Desabilita movimento via touch
+
+**Comportamento:**
+- **Desktop com 1-2 slides:** Drag desabilitado
+- **Desktop com 3+ slides:** Drag habilitado
+- **Mobile (qualquer quantidade):** Drag habilitado (necessário para navegação)
+
+**Resultado:** Elimina comportamento estranho do drag no desktop quando há poucos slides, mantendo funcionalidade no mobile.
 
 ---
 
@@ -142,22 +162,57 @@ const getThumbWidth = () => {
 ### Swiper Configuration
 - `slidesPerView`: Número de slides visíveis simultaneamente
 - `slidesPerGroup`: Número de slides que avançam por transição
-- `loop`: Habilita loop infinito
+- `loop`: Habilita loop infinito (desabilitado nas thumbnails para evitar bugs)
 - `loopedSlides`: Número de slides duplicados para o loop funcionar
-- `spaceBetween`: Espaçamento entre slides (em pixels)
+- `spaceBetween`: Espaçamento entre slides (em pixels) - sempre 10px
+- `centeredSlides`: Centraliza slides quando há menos que o `slidesPerView`
+- `centeredSlidesBounds`: Limita os bounds quando centralizado
+- `simulateTouch`: Simula eventos de touch no desktop (mouse drag)
+- `allowTouchMove`: Permite movimento via touch/drag
 
 ### Breakpoints
 - Desktop: `>= 640px` (40em)
 - Mobile: `< 640px`
 
+### Fórmula de Largura dos Thumbnails
+Com `slidesPerView={3}` e `spaceBetween={10}`:
+- Cada slide ocupa: `calc((100% - 20px) / 3)`
+- Onde `20px = 2 * spaceBetween` (espaço entre 3 slides = 2 espaços)
+
+---
+
+## 🐛 Bugs Corrigidos
+
+### Bug 1: Sincronização Reversa entre Carrosséis
+**Problema:** Ao navegar no carrossel principal, o carrossel de thumbnails acompanhava na direção errada.
+
+**Solução:** Desabilitar loop infinito nas thumbnails (`loop={false}`)
+
+**Status:** ✅ Resolvido
+
+### Bug 2: Comportamento Estranho com 2 Slides
+**Problema:** Com 2 slides, drag no desktop causava comportamento estranho, jogando slides para o final.
+
+**Solução:** Desabilitar `simulateTouch` e `allowTouchMove` no desktop quando há 2 ou menos slides.
+
+**Status:** ✅ Resolvido
+
+### Bug 3: Navegação dos Thumbnails com Poucos Slides
+**Problema:** Setas de navegação dos thumbnails causavam bugs quando havia menos de 3 slides.
+
+**Solução:** Desabilitar navegação quando `slidesCount < 3`.
+
+**Status:** ✅ Resolvido
+
 ---
 
 ## 🔄 Próximos Passos
 
-- [ ] Ajustar comportamento de sincronização entre carrossel principal e thumbnails
+- [x] Ajustar comportamento de sincronização entre carrossel principal e thumbnails
 - [ ] Testar em diferentes dispositivos e navegadores
 - [ ] Validar performance com muitos slides
 - [ ] Documentar props adicionais no README
+- [ ] Adicionar CSS para garantir 1/3 do espaço sempre (se necessário)
 
 ---
 

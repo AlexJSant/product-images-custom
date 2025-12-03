@@ -72,23 +72,31 @@ const ThumbnailSwiper = props => {
 
   const hasThumbs = slides.length >= 1 // Mudança: >= 1 ao invés de > 1
   const slidesCount = slides.length || 1
+
+  // Desabilitar navegação quando há menos de 3 slides
+  const shouldShowNavigation = slidesCount >= 3 && displayThumbnailsArrows
+
+  // Detectar se é desktop e desabilitar drag quando há 2 slides
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640
+  // const shouldDisableDrag = isDesktop && slidesCount === 2
+  const shouldDisableDrag = isDesktop && slidesCount <= 2
   
   // Definir largura mínima dos thumbnails
-  const THUMB_MIN_WIDTH_DESKTOP = 231 // Ajuste conforme sua medida ideal
-  const THUMB_MIN_WIDTH_MOBILE = 100 // Ajuste para mobile
+  // const THUMB_MIN_WIDTH_DESKTOP = 231 // Ajuste conforme sua medida ideal
+  // const THUMB_MIN_WIDTH_MOBILE = 100 // Ajuste para mobile
   
-  // Calcular largura baseada no número de slides
-  const getThumbWidth = () => {
-    if (slidesCount >= 3) {
-      return undefined // Usa w-20 (20%) quando há 3+ slides
-    }
-    // Quando há menos de 3, usa largura mínima
-    return typeof window !== 'undefined' && window.innerWidth >= 640 
-      ? `${THUMB_MIN_WIDTH_DESKTOP}px` 
-      : `${THUMB_MIN_WIDTH_MOBILE}px`
-  }
+  // // Calcular largura baseada no número de slides
+  // const getThumbWidth = () => {
+  //   if (slidesCount >= 3) {
+  //     return undefined // Usa w-20 (20%) quando há 3+ slides
+  //   }
+  //   // Quando há menos de 3, usa largura mínima
+  //   return typeof window !== 'undefined' && window.innerWidth >= 640 
+  //     ? `${THUMB_MIN_WIDTH_DESKTOP}px` 
+  //     : `${THUMB_MIN_WIDTH_MOBILE}px`
+  // }
 
-  const thumbWidth = getThumbWidth()
+  // const thumbWidth = getThumbWidth()
 
   const thumbClassName = classNames(
     `${handles.carouselGaleryThumbs} dn h-auto`,
@@ -113,7 +121,11 @@ const ThumbnailSwiper = props => {
   )
 
   const arrows = useMemo(() => {
-    if (!displayThumbnailsArrows) {
+    // if (!displayThumbnailsArrows) {
+    //   return null
+    // }
+    // Não mostrar setas quando há menos de 3 slides
+    if (!displayThumbnailsArrows || slidesCount < 3) {
       return null
     }
 
@@ -159,20 +171,33 @@ const ThumbnailSwiper = props => {
     displayThumbnailsArrows,
     handles.productImagesThumbCaret,
     isThumbsVertical,
+    slidesCount, // Adicionar slidesCount como dependência
   ])
 
   return (
     <div className={thumbClassName} data-testid="thumbnail-swiper">
       <Swiper
         className={`h-100 ${handles.productImagesThumbsSwiperContainer}`}
-        slidesPerView={slides.length >= 3 ? 3 : "auto"}
+        //
+        // slidesPerView={slides.length >= 3 ? 3 : "auto"}
+        slidesPerView={3} // Sempre 3 espaços visuais
         spaceBetween={10}
+        // spaceBetween={slides.length >= 3 ? 10 : 0} // Sem espaçamento quando há menos de 3
+        //
         touchRatio={1}
         threshold={8}
-        navigation={navigationConfig}
+        // navigation={navigationConfig}
+        navigation={shouldShowNavigation ? navigationConfig : false} // Desabilitar quando há menos de 3 slides
         slidesPerGroup={1}
-        loop={slides.length >= 3}
-        loopedSlides={slides.length >= 3 ? 3 : undefined}
+        // Manter o loop desativado das thumbnails para evitar problemas de sincronização
+        // START
+        loop={false}
+        simulateTouch={!shouldDisableDrag} // Desabilitar drag no desktop quando há 2 slides
+        allowTouchMove={!shouldDisableDrag} // Desabilitar movimento via touch quando há 2 slides no desktop
+        // loop={slides.length >= 3}
+        // loopedSlides={slides.length >= 3 ? 3 : undefined}
+        // END
+        //
         freeMode={false}
         mousewheel={false}
         zoom={false}
@@ -181,6 +206,10 @@ const ThumbnailSwiper = props => {
         preloadImages
         updateOnWindowResize
         direction={isThumbsVertical ? 'vertical' : 'horizontal'}
+        //
+        centeredSlides={slides.length < 3} // Centralizar quando há menos de 3 slides
+        centeredSlidesBounds={slides.length < 3} // Limitar bounds quando centralizado
+        //
         {...swiperProps}
       >
         {slides.map((slide, i) => {
@@ -192,8 +221,8 @@ const ThumbnailSwiper = props => {
                 height: isThumbsVertical ? 'auto' : '115px',
                 maxHeight: thumbnailMaxHeight || 'unset',
                 position: 'relative',
-                width: thumbWidth, // Adicionar largura quando há menos de 3 slides
-                minWidth: thumbWidth, // Garantir largura mínima
+                // width: thumbWidth, // Adicionar largura quando há menos de 3 slides
+                // minWidth: thumbWidth, // Garantir largura mínima
               }}
             >
               <Thumbnail
