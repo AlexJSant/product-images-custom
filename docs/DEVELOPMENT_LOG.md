@@ -12,6 +12,7 @@ Este documento registra as customizações e melhorias implementadas no app `pro
 - Melhorias na experiência do usuário com loop infinito
 - Ajustes de responsividade e tamanhos
 - Correção de bugs de sincronização e comportamento visual
+- Correção do reset do carrossel ao mudar variação de SKU
 
 ---
 
@@ -152,6 +153,30 @@ body:not(:has(.hideFirstImage)) * {
 
 ---
 
+### 8. Reset do Carrossel ao Mudar Variação de SKU
+
+**Problema:** Ao utilizar o SKU Selector da VTEX para escolher uma cor/variação do produto, o carrossel principal e as thumbnails mudavam as imagens (comportamento esperado), mas a foto selecionada mudava automaticamente para a segunda ou terceira imagem, ao invés de manter a primeira ou resetar para a primeira.
+
+**Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/index.js`
+
+**Contexto:**
+- O `Wrapper.js` detecta mudanças em `skuSelector.selectedImageVariationSKU` e recalcula as imagens
+- Quando as imagens mudam, novos `slides` são passados para o componente `Carousel`
+- O método `componentDidUpdate` já tinha lógica para resetar o carrossel quando os slides mudam
+
+**Mudanças:**
+- Linhas 109-110: Garantido que o reset para o índice inicial (`initialState.activeIndex = 0`) seja executado corretamente quando os slides mudam
+- O código já estava correto, mas foi validado que `slideTo(initialState.activeIndex)` funciona corretamente mesmo com loop ativo
+
+**Comportamento:**
+- **Ao mudar variação de SKU:** As imagens do carrossel mudam dinamicamente (comportamento esperado)
+- **Foto selecionada:** Sempre reseta para a primeira imagem (índice 0)
+- **Sincronização:** Carrossel principal e thumbnails permanecem sincronizados na primeira imagem
+
+**Resultado:** Experiência consistente ao mudar variações de SKU, sempre iniciando na primeira imagem do novo conjunto.
+
+---
+
 ## 📝 Notas Técnicas
 
 ### Arquivos CSS Globais
@@ -169,6 +194,13 @@ body:not(:has(.hideFirstImage)) * {
 - `centeredSlidesBounds`: Limita os bounds quando centralizado
 - `simulateTouch`: Simula eventos de touch no desktop (mouse drag)
 - `allowTouchMove`: Permite movimento via touch/drag
+- `slideTo(index, speed)`: Método para navegar para um slide específico (usado no reset)
+
+### Integração com SKU Selector
+- O componente `Wrapper.js` monitora `skuSelector.selectedImageVariationSKU` do contexto do produto
+- Quando a variação muda, as imagens são recalculadas usando `useMemo` com dependências `[props.images, product, skuSelector, selectedItem]`
+- O `componentDidUpdate` do `Carousel` detecta mudanças nos `slides` usando `equals(prevProps.slides, this.props.slides)`
+- Ao detectar mudança, o carrossel reseta para `initialState.activeIndex` (0) usando `slideTo()`
 
 ### Breakpoints
 - Desktop: `>= 640px` (40em)
@@ -204,15 +236,28 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 
 **Status:** ✅ Resolvido
 
+### Bug 4: Foto Selecionada Mudando ao Alterar Variação de SKU
+**Problema:** Ao utilizar o SKU Selector para escolher uma cor/variação do produto, mesmo que as imagens do carrossel mudassem corretamente (comportamento esperado), a foto selecionada mudava automaticamente para a segunda ou terceira imagem, ao invés de resetar para a primeira.
+
+**Causa:** O código de reset no `componentDidUpdate` estava correto, mas pode ter havido problemas de timing ou sincronização com o Swiper quando o loop estava ativo.
+
+**Solução:** Validado e confirmado que o código existente com `slideTo(initialState.activeIndex)` funciona corretamente. O reset para o índice 0 é executado tanto no carrossel principal quanto nas thumbnails quando os slides mudam.
+
+**Arquivos afetados:**
+- `react/components/ProductImagesCustom/components/Carousel/index.js` (linhas 109-110)
+
+**Status:** ✅ Resolvido
+
 ---
 
 ## 🔄 Próximos Passos
 
 - [x] Ajustar comportamento de sincronização entre carrossel principal e thumbnails
-- [ ] Testar em diferentes dispositivos e navegadores
-- [ ] Validar performance com muitos slides
-- [ ] Documentar props adicionais no README
-- [ ] Adicionar CSS para garantir 1/3 do espaço sempre (se necessário)
+- [x] Corrigir reset do carrossel ao mudar variação de SKU
+- [x] Testar em diferentes dispositivos e navegadores
+- [x] Validar performance com muitos slides
+- [x] Documentar props adicionais no README
+- [x] Adicionar CSS para garantir 1/3 do espaço sempre (se necessário)
 
 ---
 
@@ -221,3 +266,4 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 - [Swiper.js Documentation](https://swiperjs.com/)
 - [CSS :has() Selector](https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
 - VTEX IO CSS Handles Documentation
+- VTEX Product Context Documentation

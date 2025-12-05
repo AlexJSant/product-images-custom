@@ -53,11 +53,11 @@ The `product-images` block renders an image or video configured in the SKU setti
 | `contentOrder`            | `'videos-first'` &#124; `'images-first'` | Controls the order in which the images and videos are displayed.                                                                                                                                                                                                                                                                                                                                                                                                                                | `'images-first'` |
 | `contentType`             | `enum`                                   | Controls the type of content that will be displayed in the block. Possible values are `images`, `videos`, or `all`.                                                                                                                                                                                                                                                                                                                                                                            | `all`            |
 | `displayMode`             | `enum`                                   | Defines how the product media should be displayed. Possible values are `carousel` (displays the product images and videos in a carousel), `list` (displays only the product images inline, with no extra markup), and `first-image` (displays only the first image available). **The `list` and `first-image` values don't display product videos and are only compatible with the `maxHeight`, `hiddenImages`, `zoomFactor`, `aspectRatio`,`ModalZoomElement`, and `zoomMode` props**. | `carousel`       |
-| `displayThumbnailsArrows` | `boolean`                                | Displays navigation arrows on the thumbnail media (if there are enough thumbnails for them to scroll).                                                                                                                                                                                                                                                                                                                                                                                          | `false`          |
+| `displayThumbnailsArrows` | `boolean`                                | Displays navigation arrows on the thumbnail media. **Note:** Navigation arrows are only shown when there are 3 or more slides. With 1-2 slides, navigation is automatically disabled to prevent synchronization issues.                                                                                                                                                                                                                                                                                                                                                          | `false`          |
 | `hideFirstImage`          | `boolean`                                | Hides the first product image when set to `true`. This prop is available in the Site Editor and can be configured via `blocks.json`. Works with all display modes (`carousel`, `list`, and `first-image`).                                                                                                                                                                                                                        | `false`          |
-| `hiddenImages`            | `string`                                 | Hides images with labels that match the values listed in this prop. Intended to be used with the `product-summary-sku-selector` block. To learn more, see the [SKU Selector](https://developers.vtex.com/docs/apps/vtex.store-components/skuselector) documentation.                                                                                                                                                                                                                      | `skuvariation`   |
+| `hiddenImages`            | `string` or `string[]`                                 | Hides images with labels that match the values listed in this prop. Intended to be used with the `product-summary-sku-selector` block or SKU Selector. When using SKU Selector to display color variation images (like a green swatch to represent a green SKU), you can hide these images from the main carousel by setting the image label in the catalog to match this prop value. To learn more, see the [SKU Selector](https://developers.vtex.com/docs/apps/vtex.store-components/skuselector) documentation.                                                                                                                                                                                                                      | `skuvariation`   |
 | `maxHeight`               | `number`                                 | Maximum height for individual product images (in pixels).                                                                                                                                                                                                                                                                                                                                                                                                                                       | `600`            |
-| `ModalZoom`               | `block`                                  | Opens a modal to zoom in on the product image. This prop value must match the name of the block that triggers the modal containing the product image for zooming (for example, `modal-layout` from [Modal layout](https://developers.vtex.com/apps/vtex.modal-layout) app). The `ModalZoom` prop will only work if the `zoomMode` prop is set as `open-modal`. To learn more, see the [Advanced configuration section](#advanced-configuration).                 | `undefined`      |
+| `ModalZoom`               | `block`                                  | Opens a modal to zoom in on the product image. This prop value must match the name of the block that triggers the modal containing the product image for zooming (for example, `modal-layout` from [Modal layout](https://developers.vtex.com/docs/apps/vtex.modal-layout) app). The `ModalZoom` prop will only work if the `zoomMode` prop is set as `open-modal`. To learn more, see the [Advanced configuration section](#advanced-configuration).                 | `undefined`      |
 | `placeholder`             | `string`                                 | Sets the URL for a placeholder image to be displayed when no product image or video is available.                                                                                                                                                                                                                                                                                                                                                                                         | `undefined`      |
 | `position`                | `enum`                                   | Sets the position of the thumbnails (`left` or `right`). Only used when `thumbnailsOrientation` is `vertical`.                                                                                                                                                                                                                                                                                                                                                                                   | `left`           |
 | `showNavigationArrows`    | `boolean`                                | Defines if the navigation arrows should be displayed.                                                                                                                                                                                                                                                                                                                                                                                                                                           | `true`           |
@@ -104,6 +104,45 @@ When `hideFirstImage` is set to `true`, the component applies the `hideFirstImag
 }
 ```
 
+### Carousel Behavior
+
+The carousel component includes several optimized behaviors for better user experience:
+
+#### Infinite Loop
+- The main carousel has infinite loop enabled when there are 2 or more slides
+- Thumbnails carousel has loop disabled to maintain proper synchronization with the main carousel
+- This ensures smooth navigation while keeping both carousels in sync
+
+#### Thumbnails Display
+- **Always shows 3 visual spaces:** The thumbnail carousel always displays 3 visual spaces (occupied or empty), each taking exactly 1/3 of the available space
+- **1 slide:** 1 thumbnail in the center space, 2 empty spaces
+- **2 slides:** 2 thumbnails centered, 1 empty space
+- **3+ slides:** 3 thumbnails visible, horizontal scroll to see more
+- **Single image support:** Thumbnails are rendered even when there's only 1 image
+
+#### Navigation Behavior
+- **Thumbnail arrows:** Navigation arrows on thumbnails are only shown when there are 3 or more slides (if `displayThumbnailsArrows` is `true`)
+- **Desktop drag:** Drag functionality (mouse drag) is disabled on desktop when there are 2 or fewer slides to prevent unexpected behavior
+- **Mobile drag:** Drag is always enabled on mobile devices for touch navigation
+
+#### SKU Variation Integration
+When using the VTEX SKU Selector to choose product color/variation:
+- The carousel automatically updates to show images from the selected SKU variation
+- The carousel resets to the first image (index 0) when the SKU variation changes
+- Both the main carousel and thumbnails remain synchronized on the first image
+- This provides a consistent experience when switching between product variations
+
+**Example CSS for thumbnail spacing (optional):**
+
+If you need to ensure each thumbnail takes exactly 1/3 of the space, you can add this CSS to your theme:
+
+```css
+.carouselGaleryThumbs .swiper-slide {
+  width: calc((100% - 20px) / 3) !important;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+```
 
 ## Advanced configuration
 
@@ -203,3 +242,4 @@ To apply CSS customizations to this and other blocks, see the guide [Using CSS h
 | `thumbImg--video`                                  |
 | `video`                                            |
 | `videoContainer`                                   |
+

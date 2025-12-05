@@ -140,8 +140,8 @@ ProductImagesCustomWrapper.getSchema = ({ zoomProps: { zoomType } = {} }) => ({
       },
     },
     hideFirstImage: {
-      title: 'admin/editor.product-images.hideFirstImage.title',
-      // title: 'Esconder a primeira imagem',
+      // title: 'admin/editor.product-images.hideFirstImage.title',
+      title: 'Esconder a primeira imagem',
       description: 'admin/editor.product-images.hideFirstImage.description',
       type: 'boolean',
       default: false,

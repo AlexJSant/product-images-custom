@@ -106,8 +106,25 @@ class Carousel extends Component {
         return
       }
 
-      this.state.gallerySwiper?.slideTo(initialState.activeIndex)
-      this.state.thumbSwiper?.slideTo(initialState.activeIndex)
+      // this.state.gallerySwiper?.slideTo(initialState.activeIndex)
+      // this.state.thumbSwiper?.slideTo(initialState.activeIndex)
+
+      // Reset para o primeiro slide quando as imagens mudam (ex: mudança de SKU)
+      // Usar setTimeout para garantir que o Swiper atualizou seus slides internos
+      setTimeout(() => {
+        if (this.state.gallerySwiper && !this.state.gallerySwiper.destroyed) {
+          // Se o loop estiver ativo, usar slideToLoop, caso contrário slideTo
+          if (this.props.slides.length > 1 && this.state.gallerySwiper.slideToLoop) {
+            this.state.gallerySwiper.slideToLoop(0, 0)
+          } else {
+            this.state.gallerySwiper.slideTo(0, 0)
+          }
+        }
+        
+        if (this.state.thumbSwiper && !this.state.thumbSwiper.destroyed) {
+          this.state.thumbSwiper.slideTo(0, 0)
+        }
+      }, 0)
 
       this.setState({
         ...initialState,
