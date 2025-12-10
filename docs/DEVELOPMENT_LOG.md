@@ -13,6 +13,8 @@ Este documento registra as customizações e melhorias implementadas no app `pro
 - Ajustes de responsividade e tamanhos
 - Correção de bugs de sincronização e comportamento visual
 - Correção do reset do carrossel ao mudar variação de SKU
+- Implementação de aspect ratio fixo para thumbnails
+- Ajustes de espaçamento e alinhamento
 
 ---
 
@@ -57,24 +59,24 @@ body:not(:has(.hideFirstImage)) * {
 **Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
 
 **Mudanças:**
-- Linha 178: `slidesPerView={3}` - Sempre mostra 3 espaços visuais
+- Linha 183: `slidesPerView={3}` - Sempre mostra 3 espaços visuais
 - Removida lógica condicional de `slidesPerView`
 - Removida lógica de largura fixa (`thumbWidth`) quando há menos de 3 slides
-- Linha 193: `centeredSlides={slides.length < 3}` - Centraliza quando há menos de 3 slides
-- Linha 194: `centeredSlidesBounds={slides.length < 3}` - Limita bounds quando centralizado
+- Linha 215: `centeredSlides={slides.length < 2}` - Centraliza apenas quando há 1 slide
+- Linha 217: `centeredSlidesBounds={false}` - Desabilitado para permitir cliques em todos os slides
 
 **Comportamento:**
 - **Sempre:** Mostra 3 espaços visuais, cada um ocupando 1/3 do espaço
-- **1 slide:** 1 thumbnail ocupando espaço central, 2 espaços vazios
-- **2 slides:** 2 thumbnails centralizados, 1 espaço vazio
+- **1 slide:** 1 thumbnail centralizado, 2 espaços vazios
+- **2 slides:** 2 thumbnails alinhados à esquerda, 1 espaço vazio
 - **3+ slides:** 3 thumbnails visíveis, scroll horizontal para ver mais
 
-**CSS complementar (Store Theme ou swiper.scoped.css):**
-/* Garantir que cada slide ocupe exatamente 1/3 do espaço */
+**CSS complementar (swiper.scoped.css):**
 .carouselGaleryThumbs .swiper-slide {
-  width: calc((100% - 20px) / 3) !important; /* 100% - (2 * spaceBetween) / 3 */
+  width: calc((100% - 48px) / 3) !important; /* 100% - (2 * 24px) / 3 */
   flex-shrink: 0;
   flex-grow: 0;
+  aspect-ratio: 405 / 241;
 }---
 
 ### 4. Loop Infinito nos Carrosséis
@@ -88,7 +90,7 @@ body:not(:has(.hideFirstImage)) * {
 - **Comportamento:** Loop sempre ativo quando há mais de 1 slide
 
 **Mudanças no ThumbnailSwiper:**
-- Linha 189: `loop={false}` - **Loop desabilitado permanentemente**
+- Linha 195: `loop={false}` - **Loop desabilitado permanentemente**
 - **Motivo:** Evitar problemas de sincronização entre carrossel principal e thumbnails
 
 **Resultado:** Carrossel principal sempre infinito (quando aplicável), thumbnails sem loop para evitar bugs de sincronização.
@@ -120,9 +122,9 @@ body:not(:has(.hideFirstImage)) * {
 
 **Mudanças:**
 - Linha 77: `const shouldShowNavigation = slidesCount >= 3 && displayThumbnailsArrows`
-- Linha 185: `navigation={shouldShowNavigation ? navigationConfig : false}`
-- Linha 116: Adicionada verificação `slidesCount < 3` no `useMemo` das arrows
-- Linha 169: Adicionado `slidesCount` como dependência do `useMemo`
+- Linha 191: `navigation={shouldShowNavigation ? navigationConfig : false}`
+- Linha 128: Adicionada verificação `slidesCount < 3` no `useMemo` das arrows
+- Linha 174: Adicionado `slidesCount` como dependência do `useMemo`
 
 **Comportamento:**
 - **3+ slides:** Navegação habilitada (se `displayThumbnailsArrows` for `true`)
@@ -132,28 +134,94 @@ body:not(:has(.hideFirstImage)) * {
 
 ---
 
-### 7. Desabilitar Drag no Desktop com 2 ou Menos Slides
+### 7. Correção de Seleção de Thumbnails com Menos de 3 Slides
 
-**Problema:** Drag (arrastar com mouse) no desktop causava comportamento estranho quando havia 2 slides, jogando os slides para o final do carrossel.
+**Problema:** Quando havia menos de 3 slides (especialmente 2), não era possível selecionar thumbnails diretamente clicando nelas.
 
 **Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
 
 **Mudanças:**
-- Linha 80: `const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 640`
-- Linha 82: `const shouldDisableDrag = isDesktop && slidesCount <= 2`
-- Linha 191: `simulateTouch={!shouldDisableDrag}` - Desabilita simulação de touch no desktop
-- Linha 192: `allowTouchMove={!shouldDisableDrag}` - Desabilita movimento via touch
+- Linha 199: `simulateTouch={true}` - Sempre habilitado
+- Linha 200: `allowTouchMove={true}` - **SEMPRE habilitado para permitir cliques funcionarem**
+- Linha 217: `centeredSlidesBounds={false}` - Desabilitado para permitir cliques em todos os slides
 
 **Comportamento:**
-- **Desktop com 1-2 slides:** Drag desabilitado
-- **Desktop com 3+ slides:** Drag habilitado
-- **Mobile (qualquer quantidade):** Drag habilitado (necessário para navegação)
+- **Todos os casos:** Cliques em thumbnails funcionam corretamente
+- **Desktop:** Drag habilitado (pode ser desabilitado via CSS se necessário)
+- **Mobile:** Drag e cliques funcionam normalmente
 
-**Resultado:** Elimina comportamento estranho do drag no desktop quando há poucos slides, mantendo funcionalidade no mobile.
+**Resultado:** Thumbnails são clicáveis em todos os cenários, permitindo seleção direta mesmo com 1-2 slides.
 
 ---
 
-### 8. Reset do Carrossel ao Mudar Variação de SKU
+### 8. Aspect Ratio Fixo 405:241 para Thumbnails
+
+**Problema:** Thumbnails precisavam manter um aspect ratio fixo de 405:241 (largura x altura) para consistência visual.
+
+**Arquivos modificados:**
+- `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
+- `react/components/ProductImagesCustom/components/Carousel/swiper.scoped.css`
+
+**Mudanças no ThumbnailSwiper.js:**
+- Linha 227: `aspectRatio: isThumbsVertical ? undefined : '405 / 241'` - Aplicado no style do SwiperSlide
+- Linha 229: `height: isThumbsVertical ? 'auto' : undefined` - Removida altura fixa, deixando aspect-ratio calcular
+- Linha 243: `aspectRatio={thumbnailAspectRatio || '405:241'}` - Passado para o componente Thumbnail
+
+**Mudanças no swiper.scoped.css:**
+- Linha 89: `aspect-ratio: 405 / 241;` - Garantido no CSS também
+- Linha 96: `aspect-ratio: 405 / 241;` - Mantido em mobile
+
+**Comportamento:**
+- **Desktop e Mobile:** Thumbnails sempre mantêm proporção 405:241
+- **Altura:** Calculada automaticamente baseada na largura
+- **Largura:** Definida pelo CSS `calc((100% - 48px) / 3)`
+
+**Resultado:** Thumbnails com proporção consistente em todas as telas.
+
+---
+
+### 9. Espaçamento entre Thumbnails Aumentado para 24px
+
+**Problema:** Espaçamento de 10px entre thumbnails era insuficiente visualmente.
+
+**Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
+
+**Mudanças:**
+- Linha 185: `spaceBetween={24}` - Alterado de 10 para 24px
+
+**Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/swiper.scoped.css`
+
+**Mudanças:**
+- Linha 86: `width: calc((100% - 48px) / 3)` - Atualizado para considerar 2 * 24px = 48px
+
+**Comportamento:**
+- **Espaçamento:** 24px entre cada thumbnail (`margin-right: 24px` aplicado pelo Swiper)
+- **Largura dos slides:** `calc((100% - 48px) / 3)` - Considera os 2 espaços de 24px entre 3 slides
+
+**Resultado:** Melhor espaçamento visual entre thumbnails.
+
+---
+
+### 10. Correção de Alinhamento Visual com 2 Slides
+
+**Problema:** Quando havia 2 slides, o `centeredSlides` causava alinhamento inconsistente, às vezes alinhando à direita ao invés de à esquerda.
+
+**Arquivo modificado:** `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js`
+
+**Mudanças:**
+- Linha 215: `centeredSlides={slides.length < 2}` - Centraliza apenas quando há 1 slide (antes: `< 3`)
+- Linha 217: `centeredSlidesBounds={false}` - Desabilitado para evitar problemas de alinhamento
+
+**Comportamento:**
+- **1 slide:** Centralizado (via `centeredSlides={true}`)
+- **2 slides:** Alinhados à esquerda (sem `centeredSlides`)
+- **3+ slides:** Alinhados à esquerda (comportamento padrão do Swiper)
+
+**Resultado:** Alinhamento consistente à esquerda quando há 2 ou mais slides, centralizado apenas com 1 slide.
+
+---
+
+### 11. Reset do Carrossel ao Mudar Variação de SKU
 
 **Problema:** Ao utilizar o SKU Selector da VTEX para escolher uma cor/variação do produto, o carrossel principal e as thumbnails mudavam as imagens (comportamento esperado), mas a foto selecionada mudava automaticamente para a segunda ou terceira imagem, ao invés de manter a primeira ou resetar para a primeira.
 
@@ -185,16 +253,17 @@ body:not(:has(.hideFirstImage)) * {
 - Arquivo `styles.css` é usado como CSS Module em vários componentes
 
 ### Swiper Configuration
-- `slidesPerView`: Número de slides visíveis simultaneamente
-- `slidesPerGroup`: Número de slides que avançam por transição
+- `slidesPerView`: Número de slides visíveis simultaneamente (sempre 3 para thumbnails)
+- `slidesPerGroup`: Número de slides que avançam por transição (sempre 1)
 - `loop`: Habilita loop infinito (desabilitado nas thumbnails para evitar bugs)
 - `loopedSlides`: Número de slides duplicados para o loop funcionar
-- `spaceBetween`: Espaçamento entre slides (em pixels) - sempre 10px
-- `centeredSlides`: Centraliza slides quando há menos que o `slidesPerView`
-- `centeredSlidesBounds`: Limita os bounds quando centralizado
-- `simulateTouch`: Simula eventos de touch no desktop (mouse drag)
-- `allowTouchMove`: Permite movimento via touch/drag
+- `spaceBetween`: Espaçamento entre slides (em pixels) - **24px para thumbnails**
+- `centeredSlides`: Centraliza slides quando há menos que o `slidesPerView` (apenas com 1 slide)
+- `centeredSlidesBounds`: Limita os bounds quando centralizado (desabilitado)
+- `simulateTouch`: Simula eventos de touch no desktop (mouse drag) - sempre habilitado
+- `allowTouchMove`: Permite movimento via touch/drag - **sempre habilitado para permitir cliques**
 - `slideTo(index, speed)`: Método para navegar para um slide específico (usado no reset)
+- `aspectRatio`: Propriedade CSS para manter proporção fixa (405/241 para thumbnails)
 
 ### Integração com SKU Selector
 - O componente `Wrapper.js` monitora `skuSelector.selectedImageVariationSKU` do contexto do produto
@@ -207,9 +276,16 @@ body:not(:has(.hideFirstImage)) * {
 - Mobile: `< 640px`
 
 ### Fórmula de Largura dos Thumbnails
-Com `slidesPerView={3}` e `spaceBetween={10}`:
-- Cada slide ocupa: `calc((100% - 20px) / 3)`
-- Onde `20px = 2 * spaceBetween` (espaço entre 3 slides = 2 espaços)
+Com `slidesPerView={3}` e `spaceBetween={24}`:
+- Cada slide ocupa: `calc((100% - 48px) / 3)`
+- Onde `48px = 2 * spaceBetween` (espaço entre 3 slides = 2 espaços de 24px)
+- Aspect ratio: `405 / 241` (largura x altura)
+
+### Aspect Ratio dos Thumbnails
+- **Proporção:** 405:241 (largura:altura)
+- **Aplicado via:** CSS `aspect-ratio: 405 / 241` e style inline `aspectRatio: '405 / 241'`
+- **Comportamento:** Altura calculada automaticamente baseada na largura
+- **Responsivo:** Mantém proporção em desktop e mobile
 
 ---
 
@@ -225,7 +301,7 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 ### Bug 2: Comportamento Estranho com 2 Slides
 **Problema:** Com 2 slides, drag no desktop causava comportamento estranho, jogando slides para o final.
 
-**Solução:** Desabilitar `simulateTouch` e `allowTouchMove` no desktop quando há 2 ou menos slides.
+**Solução:** Manter `simulateTouch={true}` e `allowTouchMove={true}` sempre habilitados. O comportamento foi corrigido com ajustes no `centeredSlides`.
 
 **Status:** ✅ Resolvido
 
@@ -248,6 +324,34 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 
 **Status:** ✅ Resolvido
 
+### Bug 5: Thumbnails Não Clicáveis com Menos de 3 Slides
+**Problema:** Quando havia menos de 3 slides (especialmente 2), não era possível selecionar thumbnails diretamente clicando nelas.
+
+**Causa:** `allowTouchMove={false}` estava desabilitando não apenas o drag, mas também os eventos de clique.
+
+**Solução:** 
+- `allowTouchMove={true}` - Sempre habilitado para permitir cliques
+- `centeredSlidesBounds={false}` - Desabilitado para permitir cliques em todos os slides
+
+**Arquivos afetados:**
+- `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js` (linhas 200, 217)
+
+**Status:** ✅ Resolvido
+
+### Bug 6: Alinhamento Inconsistente com 2 Slides
+**Problema:** Quando havia 2 slides, o `centeredSlides={true}` causava alinhamento inconsistente, às vezes alinhando à direita ao invés de à esquerda.
+
+**Causa:** `centeredSlides` com 2 slides e 3 espaços visuais criava comportamento imprevisível.
+
+**Solução:**
+- `centeredSlides={slides.length < 2}` - Centralizar apenas quando há 1 slide
+- `centeredSlidesBounds={false}` - Desabilitado para evitar problemas de alinhamento
+
+**Arquivos afetados:**
+- `react/components/ProductImagesCustom/components/Carousel/ThumbnailSwiper.js` (linhas 215, 217)
+
+**Status:** ✅ Resolvido
+
 ---
 
 ## 🔄 Próximos Passos
@@ -257,7 +361,11 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 - [x] Testar em diferentes dispositivos e navegadores
 - [x] Validar performance com muitos slides
 - [x] Documentar props adicionais no README
-- [x] Adicionar CSS para garantir 1/3 do espaço sempre (se necessário)
+- [x] Adicionar CSS para garantir 1/3 do espaço sempre
+- [x] Implementar aspect ratio fixo para thumbnails
+- [x] Ajustar espaçamento entre thumbnails
+- [x] Corrigir seleção de thumbnails com poucos slides
+- [x] Corrigir alinhamento visual com 2 slides
 
 ---
 
@@ -265,5 +373,6 @@ Com `slidesPerView={3}` e `spaceBetween={10}`:
 
 - [Swiper.js Documentation](https://swiperjs.com/)
 - [CSS :has() Selector](https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
+- [CSS aspect-ratio Property](https://developer.mozilla.org/en-US/docs/Web/CSS/aspect-ratio)
 - VTEX IO CSS Handles Documentation
 - VTEX Product Context Documentation

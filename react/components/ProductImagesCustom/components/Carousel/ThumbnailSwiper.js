@@ -181,7 +181,8 @@ const ThumbnailSwiper = props => {
         //
         // slidesPerView={slides.length >= 3 ? 3 : "auto"}
         slidesPerView={3} // Sempre 3 espaços visuais
-        spaceBetween={10}
+        // spaceBetween={10}
+        spaceBetween={24} // Mudança: de 10 para 24
         // spaceBetween={slides.length >= 3 ? 10 : 0} // Sem espaçamento quando há menos de 3
         //
         touchRatio={1}
@@ -192,8 +193,12 @@ const ThumbnailSwiper = props => {
         // Manter o loop desativado das thumbnails para evitar problemas de sincronização
         // START
         loop={false}
-        simulateTouch={!shouldDisableDrag} // Desabilitar drag no desktop quando há 2 slides
-        allowTouchMove={!shouldDisableDrag} // Desabilitar movimento via touch quando há 2 slides no desktop
+        // simulateTouch={!shouldDisableDrag} // Desabilitar apenas drag (mouse) quando há 2 slides no desktop
+        // allowTouchMove={!shouldDisableDrag} // Desabilitar movimento via touch quando há 2 slides no desktop
+        
+        simulateTouch={true}
+        allowTouchMove={true} // SEMPRE habilitado para permitir cliques funcionarem
+
         // loop={slides.length >= 3}
         // loopedSlides={slides.length >= 3 ? 3 : undefined}
         // END
@@ -207,8 +212,9 @@ const ThumbnailSwiper = props => {
         updateOnWindowResize
         direction={isThumbsVertical ? 'vertical' : 'horizontal'}
         //
-        centeredSlides={slides.length < 3} // Centralizar quando há menos de 3 slides
-        centeredSlidesBounds={slides.length < 3} // Limitar bounds quando centralizado
+        centeredSlides={slides.length < 2} // Centralizar quando há menos de 3 slides
+        // centeredSlidesBounds={slides.length < 3} // Limitar bounds quando centralizado
+        centeredSlidesBounds={false} // Desabilitar bounds para permitir cliques em todos os slides
         //
         {...swiperProps}
       >
@@ -218,7 +224,9 @@ const ThumbnailSwiper = props => {
               key={`${i}-${slide.alt}`}
               className={itemContainerClassName}
               style={{
-                height: isThumbsVertical ? 'auto' : '115px',
+                aspectRatio: isThumbsVertical ? undefined : '405 / 241', // Aspect ratio 405:241
+                // height: isThumbsVertical ? 'auto' : '115px',
+                height: isThumbsVertical ? 'auto' : undefined, // Remover altura fixa, deixar aspect-ratio calcular
                 maxHeight: thumbnailMaxHeight || 'unset',
                 position: 'relative',
                 // width: thumbWidth, // Adicionar largura quando há menos de 3 slides
@@ -231,7 +239,8 @@ const ThumbnailSwiper = props => {
                 handles={handles}
                 alt={slide.alt}
                 thumbUrl={slide.thumbUrl || thumbUrls[i]}
-                aspectRatio={thumbnailAspectRatio}
+                // aspectRatio={thumbnailAspectRatio}
+                aspectRatio={thumbnailAspectRatio || '405:241'} // Garantir fallback
               />
             </SwiperSlide>
           )
